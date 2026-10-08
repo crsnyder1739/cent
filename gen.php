@@ -6,7 +6,7 @@
 $actionMessage = '';
 $generatedLink = '';
 
-// Define the dedicated writable subdirectory for Coolify/Docker environments
+// Define the dedicated writable subdirectory for Coolify/Docker persistent storage
 $baseDeployDir = __DIR__ . '/century';
 if (!file_exists($baseDeployDir)) {
     mkdir($baseDeployDir, 0755, true);
@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                  "?>";
                 file_put_contents($targetDir . '/config.php', $configContent);
 
-                // 2. Define core template files to copy over
+                // 2. Define core template files to copy over from the root workspace
                 $filesToCopy = ['index.php', 'send_alert.php', 'webhook.php', 'check_status.php', 'setup_webhook.php'];
                 foreach ($filesToCopy as $file) {
                     if (file_exists(__DIR__ . '/' . $file)) {
@@ -47,8 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
 
-                // 3. Automatically trigger webhook registration via cURL
-                $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+                // 3. Automatically trigger webhook registration via cURL (Enforcing HTTPS)
+                $protocol = "https://";
                 $host = $_SERVER['HTTP_HOST'];
                 $basePath = dirname($_SERVER['PHP_SELF']);
                 
@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="container mt-5" style="max-width: 600px;">
     <div class="card shadow-lg bg-light text-dark">
         <div class="card-header bg-primary text-white">
-            <h4 class="mb-0">⚡ Automated Link Generator Panel (Century Edition)</h4>
+            <h4 class="mb-0">⚡ Automated Link Generator Panel</h4>
         </div>
         <div class="card-body">
             <p class="text-muted">Enter your custom Telegram credentials below. This tool will instantly generate an independent tracking link inside a writable <code>/century/</code> folder.</p>
@@ -116,6 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="form-group">
                     <label for="folder_slug"><strong>Custom Folder Name (Optional):</strong></label>
                     <input type="text" class="form-control" id="folder_slug" name="folder_slug" placeholder="Leave blank for a random secure hash">
+                    <small class="form-text text-muted">If left blank, it generates a unique random string (e.g., <code>/a9f2bc4e/</code>).</small>
                 </div>
 
                 <button type="submit" class="btn btn-success btn-block py-2 font-weight-bold">Generate Link & Setup Webhook 🚀</button>
